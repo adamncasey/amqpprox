@@ -36,14 +36,41 @@ class AuthResponseData {
     std::string d_credentials;
 
   public:
+    /**
+     * \brief Create and initialize object of AuthResponseData class
+     * \param authResult represents authn/authz result for connecting AMQP
+     * client to proxy
+     * \param reason more detailed information related to auth result
+     * \param authMechanism authentication mechanism field for START-OK
+     * connection method
+     * \param credentials response field for START-OK connection method
+     */
     explicit AuthResponseData(const AuthResult &authResult,
                               std::string_view  reason        = "",
                               std::string_view  authMechanism = "",
                               std::string_view  credentials   = "");
 
-    inline const AuthResult  getAuthResult() const;
+    /**
+     * \return authn/authz result for connecting AMQP client to proxy
+     */
+    inline const AuthResult getAuthResult() const;
+
+    /**
+     * \return more detailed information related to auth result
+     */
     inline const std::string getReason() const;
+
+    /**
+     * \return authentication mechanism field for START-OK connection method.
+     * This field will be injected to START-OK connection method to send to the
+     * broker.
+     */
     inline const std::string getAuthMechanism() const;
+
+    /**
+     * \return response field for START-OK connection method. This field will
+     * be injected to START-OK connection method to send to the broker.
+     */
     inline const std::string getCredentials() const;
 };
 

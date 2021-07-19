@@ -56,7 +56,7 @@ struct OK {
 };
 
 struct CloseNoAuth {
-    constexpr static const uint16_t    CODE = Codes::not_allowed;
+    constexpr static const uint16_t    CODE = Codes::access_refused;
     constexpr static const char *const TEXT = "ERROR: Not authorized";
 };
 

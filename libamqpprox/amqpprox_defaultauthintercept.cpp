@@ -48,9 +48,8 @@ void DefaultAuthIntercept::sendRequest(const AuthRequestData,
 
 void DefaultAuthIntercept::print(std::ostream &os) const
 {
-    std::lock_guard<std::mutex> lg(d_mutex);
-    os << "No auth service will be used to authn/authz client connections."
-       << "\n";
+    os << "No external auth service will be used to authn/authz client "
+          "connections.\n";
 }
 
 }

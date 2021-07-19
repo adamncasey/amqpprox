@@ -58,7 +58,7 @@ TEST(DefaultAuthIntercept, Print)
     ioService.run();
     std::ostringstream oss;
     defaultAuth.print(oss);
-    EXPECT_EQ(
-        oss.str(),
-        "No auth service will be used to authn/authz client connections.\n");
+    EXPECT_EQ(oss.str(),
+              "No external auth service will be used to authn/authz client "
+              "connections.\n");
 }

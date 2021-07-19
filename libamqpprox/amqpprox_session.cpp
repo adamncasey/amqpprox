@@ -410,14 +410,15 @@ void Session::establishConnection()
     }
 
     auto self(shared_from_this());
-    auto authResponseCb = [this,
-                           self](const AuthResponseData &authResponseData) {
+    auto authResponseCb = [this, self, connectionManager](
+                              const AuthResponseData &authResponseData) {
         if (authResponseData.getAuthResult() ==
             AuthResponseData::AuthResult::DENY) {
             LOG_ERROR << "Disconnecting unauthenticated/unauthorized client, "
                          "reason: "
                       << authResponseData.getReason();
             disconnectUnauthClientGracefully();
+            d_sessionState.setAuthDeniedConnection(true);
             return;
         }
         else if (authResponseData.getAuthResult() ==
@@ -430,6 +431,7 @@ void Session::establishConnection()
                     authResponseData.getAuthMechanism(),
                     authResponseData.getCredentials());
             }
+            attemptConnection(connectionManager);
         }
         else {
             LOG_FATAL << "Not able to authn/authz client. Disconnecting "
@@ -438,6 +440,7 @@ void Session::establishConnection()
                       << static_cast<int>(authResponseData.getAuthResult())
                       << ", reason: " << authResponseData.getReason();
             disconnectUnauthClientGracefully();
+            d_sessionState.setAuthDeniedConnection(true);
             return;
         }
     };
@@ -449,7 +452,6 @@ void Session::establishConnection()
                         credentials.first,
                         credentials.second),
         authResponseCb);
-    attemptConnection(connectionManager);
 }
 
 void Session::print(std::ostream &os)
@@ -826,11 +828,6 @@ void Session::performDisconnectBoth()
         LOG_WARN << "Socket close failed: client=" << clientCloseEc
                  << ", server=" << serverCloseEc;
     }
-}
-
-boost::asio::io_service &Session::ioService()
-{
-    return d_ioService;
 }
 
 }

@@ -31,6 +31,13 @@ class AuthRequestData {
     std::string d_credentials;
 
   public:
+    /**
+     * \brief Create and initialize object of AuthRequestData class
+     * \param vhostName vhost name
+     * \param authMechanism authentication mechanism field for START-OK
+     * connection method
+     * \param credentials response field for START-OK connection method
+     */
     AuthRequestData(std::string_view vhostName,
                     std::string_view authMechanism,
                     std::string_view credentials);

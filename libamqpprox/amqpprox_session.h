@@ -138,11 +138,6 @@ class Session : public std::enable_shared_from_this<Session> {
 
     // ACCESSORS
     /**
-     * \return the boost::asio io service object
-     */
-    boost::asio::io_service &ioService();
-
-    /**
      * \return the threadsafe state object for the session
      */
     const SessionState &state() const;
