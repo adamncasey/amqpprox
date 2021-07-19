@@ -55,7 +55,7 @@ struct OK {
     constexpr static const char *const TEXT = "OK";
 };
 
-struct CloseNoAuth {
+struct CloseAuthDeny {
     constexpr static const uint16_t    CODE = Codes::access_refused;
     constexpr static const char *const TEXT = "ERROR: Not authorized";
 };

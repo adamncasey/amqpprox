@@ -254,7 +254,8 @@ void SessionTest::testSetupClientOpenWithShutdown(int idx)
     d_serverState.pushItem(idx, Data(encode(clientTuneOk())));
     d_serverState.pushItem(idx, Data(encode(clientOpen())));
     methods::Close closeMethod = methods::Close();
-    closeMethod.setReply(Reply::CloseNoAuth::CODE, Reply::CloseNoAuth::TEXT);
+    closeMethod.setReply(Reply::CloseAuthDeny::CODE,
+                         Reply::CloseAuthDeny::TEXT);
     d_serverState.expect(idx, [this, closeMethod](const auto &items) {
         auto data = filterVariant<Data>(items);
         ASSERT_EQ(data.size(), 1);

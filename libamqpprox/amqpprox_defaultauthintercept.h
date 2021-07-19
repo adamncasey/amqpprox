@@ -19,9 +19,7 @@
 #include <amqpprox_authinterceptinterface.h>
 #include <amqpprox_authrequestdata.h>
 
-#include <functional>
 #include <iostream>
-#include <string>
 
 #include <boost/asio.hpp>
 

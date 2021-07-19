@@ -16,6 +16,8 @@
 
 #include <amqpprox_authresponsedata.h>
 
+#include <string_view>
+
 namespace Bloomberg {
 namespace amqpprox {
 

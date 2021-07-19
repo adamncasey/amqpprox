@@ -300,7 +300,7 @@ void Connector::synthesizeCloseError(bool sendToIngressSide)
 
 void Connector::synthesizeCloseAuthError(bool sendToIngressSide)
 {
-    synthesizeMessage<Reply::CloseNoAuth>(d_close, sendToIngressSide);
+    synthesizeMessage<Reply::CloseAuthDeny>(d_close, sendToIngressSide);
 }
 
 Buffer Connector::outBuffer()

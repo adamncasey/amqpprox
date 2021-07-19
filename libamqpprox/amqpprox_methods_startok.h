@@ -21,6 +21,7 @@
 #include <boost/endian/arithmetic.hpp>
 #include <iosfwd>
 #include <string>
+#include <string_view>
 
 namespace Bloomberg {
 namespace amqpprox {

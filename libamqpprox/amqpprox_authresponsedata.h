@@ -27,6 +27,10 @@ namespace amqpprox {
  */
 class AuthResponseData {
   public:
+    /**
+     * The enum class will represents authn/authz result for specific auth
+     * client request for particular AMQP connection
+     */
     enum class AuthResult { ALLOW, DENY };
 
   private:

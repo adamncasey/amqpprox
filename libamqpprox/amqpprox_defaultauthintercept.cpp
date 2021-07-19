@@ -20,10 +20,7 @@
 #include <amqpprox_authrequestdata.h>
 #include <amqpprox_authresponsedata.h>
 
-#include <functional>
-#include <mutex>
-#include <string>
-#include <thread>
+#include <iostream>
 
 #include <boost/asio.hpp>
 

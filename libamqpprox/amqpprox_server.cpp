@@ -315,10 +315,5 @@ boost::asio::ssl::context &Server::egressTlsContext()
     return d_egressTlsContext;
 }
 
-boost::asio::io_service &Server::ioService()
-{
-    return d_ioService;
-}
-
 }  // namespace amqpprox
 }  // namespace Bloomberg

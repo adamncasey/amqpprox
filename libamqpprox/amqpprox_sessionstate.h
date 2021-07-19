@@ -109,8 +109,9 @@ class SessionState {
     void setPaused(bool paused);
 
     /**
-     * \brief Set the denied connection because of auth failure
-     * \param paused flag to specify denied connection because of auth failure
+     * \brief Set the denied connection flag, because of auth failure
+     * \param authDenied flag to specify denied connection because of auth
+     * failure
      */
     void setAuthDeniedConnection(bool authDenied);
 

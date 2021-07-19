@@ -24,7 +24,6 @@
 #include <iostream>
 
 #include <boost/asio.hpp>
-#include <boost/system/error_code.hpp>
 
 using Bloomberg::amqpprox::AuthInterceptInterface;
 using Bloomberg::amqpprox::AuthRequestData;

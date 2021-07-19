@@ -18,6 +18,7 @@
 #include <amqpprox_types.h>
 
 #include <iostream>
+#include <string_view>
 
 namespace Bloomberg {
 namespace amqpprox {

@@ -25,7 +25,6 @@
 #include <string>
 
 #include <boost/asio.hpp>
-#include <boost/system/error_code.hpp>
 
 namespace Bloomberg {
 namespace amqpprox {
