@@ -26,6 +26,8 @@
 #include <amqpprox_constants.h>
 #include <amqpprox_dnsresolver.h>
 #include <amqpprox_eventsource.h>
+#include <amqpprox_fieldtable.h>
+#include <amqpprox_fieldvalue.h>
 #include <amqpprox_flowtype.h>
 #include <amqpprox_frame.h>
 #include <amqpprox_logging.h>
@@ -417,7 +419,7 @@ void Session::establishConnection()
             LOG_ERROR << "Disconnecting unauthenticated/unauthorized client, "
                          "reason: "
                       << authResponseData.getReason();
-            disconnectUnauthClientGracefully();
+            disconnectUnauthClient(d_connector.getClientProperties());
             d_sessionState.setAuthDeniedConnection(true);
             return;
         }
@@ -439,7 +441,7 @@ void Session::establishConnection()
                          "service, isAllowed: "
                       << static_cast<int>(authResponseData.getAuthResult())
                       << ", reason: " << authResponseData.getReason();
-            disconnectUnauthClientGracefully();
+            disconnectUnauthClient(d_connector.getClientProperties());
             d_sessionState.setAuthDeniedConnection(true);
             return;
         }
@@ -472,10 +474,23 @@ void Session::pause()
     }
 }
 
-void Session::disconnectUnauthClientGracefully()
+void Session::disconnectUnauthClient(const FieldTable &clientProperties)
 {
-    d_connector.synthesizeCloseAuthError(true);
-    sendSyntheticData();
+    std::shared_ptr<FieldTable> capabilitiesTable;
+    FieldValue                  fv('F', capabilitiesTable);
+    if (clientProperties.findFieldValue(&fv, Constants::capabilities()) &&
+        fv.type() == 'F') {
+        capabilitiesTable = fv.value<std::shared_ptr<FieldTable>>();
+        if (capabilitiesTable->findFieldValue(
+                &fv, Constants::authenticationFailureClose()) &&
+            fv.type() == 't') {
+            bool authenticationFailureClose = fv.value<bool>();
+            if (authenticationFailureClose) {
+                d_connector.synthesizeCloseAuthError(true);
+                sendSyntheticData();
+            }
+        }
+    }
     disconnect(true);
 }
 
@@ -575,7 +590,8 @@ void Session::handleWriteData(FlowType                  direction,
         readData(direction);
     };
 
-    LOG_TRACE << "Write of " << data.available() << " bytes";
+    LOG_TRACE << "Write of " << data.available() << " bytes"
+              << " " << direction;
     boost::asio::async_write(writeSocket,
                              boost::asio::buffer(data.ptr(), data.available()),
                              writeHandler);
@@ -669,7 +685,6 @@ void Session::sendSyntheticData()
             d_connector.sendToIngressSide() ? d_serverSocket : d_clientSocket;
         handleWriteData(FlowType::EGRESS, writeSocket, outBuffer);
     }
-
     if (d_connector.state() == Connector::State::ERROR) {
         disconnect(true);
     }

@@ -18,6 +18,7 @@
 
 #include <amqpprox_buffer.h>
 #include <amqpprox_bufferhandle.h>
+#include <amqpprox_fieldtable.h>
 #include <amqpprox_flowtype.h>
 #include <amqpprox_method.h>
 #include <amqpprox_methods_close.h>
@@ -188,8 +189,16 @@ class Connector {
     bool sendToIngressSide();
 
     /**
+     * \brief AMQP client sends client properties using START-OK connection
+     * method. The method extracts properties information from that method
+     * fields.
+     * \return client properties as a Fieldtable
+     */
+    const FieldTable getClientProperties() const;
+
+    /**
      * \brief AMQP client sends auth mechansim and credential information using
-     * START-OK method. The method extracts mechanism and credential
+     * START-OK connection method. The method extracts mechanism and credential
      * information from that method fields.
      * \return pair of AMQP authentication mechanism, AMQP response field
      */
@@ -198,10 +207,9 @@ class Connector {
 
     /**
      * \brief Set different authentication mechanism and credentials for AMQP
-     * START-OK method, which will be sent to server for authentication and
-     * authorization
-     * \param authMechanism of AMQP authentication mechanism
-     * \param credentials data for AMQP response field
+     * START-OK connection method, which will be sent to server for
+     * authentication and authorization \param authMechanism of AMQP
+     * authentication mechanism \param credentials data for AMQP response field
      */
     void setAuthMechanismCredentials(std::string_view authMechanism,
                                      std::string_view credentials);

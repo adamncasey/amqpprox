@@ -174,9 +174,13 @@ class SessionTest : public ::testing::Test {
 
     void testSetupServerHandshake(int idx);
     void testSetupClientSendsProtocolHeader(int idx);
-    void testSetupClientStartOk(int idx);
+    void testSetupClientStartOk(
+        int                     idx,
+        const methods::StartOk &overriddenStartOk = methods::StartOk());
     void testSetupClientOpen(int idx);
-    void testSetupClientOpenWithShutdown(int idx);
+    void
+         testSetupUnauthClientOpenWithShutdown(int  idx,
+                                               bool authenticationFailureClose);
     void testSetupClientOpenWithoutTune(int idx);
     void testSetupProxyConnect(int idx, TestSocketState::State *clientBase);
     void testSetupProxySendsProtocolHeader(int idx);
@@ -224,11 +228,13 @@ void SessionTest::testSetupClientSendsProtocolHeader(int idx)
     });
 }
 
-void SessionTest::testSetupClientStartOk(int idx)
+void SessionTest::testSetupClientStartOk(
+    int                     idx,
+    const methods::StartOk &overriddenStartOk)
 {
     // Client  ------StartOk----->  Proxy                         Broker
     // Client  <-----Tune---------  Proxy                         Broker
-    d_serverState.pushItem(idx, Data(encode(clientStartOk())));
+    d_serverState.pushItem(idx, Data(encode(overriddenStartOk)));
     d_serverState.expect(idx, [this](const auto &items) {
         auto data = filterVariant<Data>(items);
         ASSERT_EQ(data.size(), 1);
@@ -247,7 +253,9 @@ void SessionTest::testSetupClientOpen(int idx)
     });
 }
 
-void SessionTest::testSetupClientOpenWithShutdown(int idx)
+void SessionTest::testSetupUnauthClientOpenWithShutdown(
+    int  idx,
+    bool authenticationFailureClose)
 {
     // Client  ------TuneOk------>  Proxy                         Broker
     // Client  ------Open-------->  Proxy                         Broker
@@ -256,16 +264,21 @@ void SessionTest::testSetupClientOpenWithShutdown(int idx)
     methods::Close closeMethod = methods::Close();
     closeMethod.setReply(Reply::CloseAuthDeny::CODE,
                          Reply::CloseAuthDeny::TEXT);
-    d_serverState.expect(idx, [this, closeMethod](const auto &items) {
-        auto data = filterVariant<Data>(items);
-        ASSERT_EQ(data.size(), 1);
-        EXPECT_EQ(data[0], Data(encode(closeMethod)));
-    });
+    d_serverState.expect(
+        idx,
+        [this, closeMethod, authenticationFailureClose](const auto &items) {
+            if (authenticationFailureClose) {
+                auto data = filterVariant<Data>(items);
+                ASSERT_EQ(data.size(), 2);
+                EXPECT_EQ(data[0], Data(encode(closeMethod)));
+                EXPECT_EQ(data[1], Data(encode(closeMethod)));
+            }
+            EXPECT_THAT(items, Contains(VariantWith<Call>(Call("shutdown"))));
+            EXPECT_THAT(items, Contains(VariantWith<Call>(Call("close"))));
+        });
     d_clientState.expect(idx, [this](const auto &items) {
         EXPECT_THAT(items, Contains(VariantWith<Call>(Call("shutdown"))));
-    });
-    d_serverState.expect(idx, [this](const auto &items) {
-        EXPECT_THAT(items, Contains(VariantWith<Call>(Call("shutdown"))));
+        EXPECT_THAT(items, Contains(VariantWith<Call>(Call("close"))));
     });
 }
 
@@ -1400,7 +1413,9 @@ TEST_F(SessionTest, Authorized_Client_Test)
     driveTo(17);
 }
 
-TEST_F(SessionTest, Unauthorized_Client_Test)
+TEST_F(
+    SessionTest,
+    Unauthorized_Client_Test_Without_Authentication_Failure_Close_Capability)
 {
     EXPECT_CALL(d_selector, acquireConnection(_, _))
         .WillOnce(DoAll(SetArgPointee<0>(d_cm), Return(0)));
@@ -1428,7 +1443,67 @@ TEST_F(SessionTest, Unauthorized_Client_Test)
     testSetupServerHandshake(1);
     testSetupClientSendsProtocolHeader(2);
     testSetupClientStartOk(3);
-    testSetupClientOpenWithShutdown(4);
+    testSetupUnauthClientOpenWithShutdown(4, false);
+
+    MaybeSecureSocketAdaptor clientSocket(d_ioService, d_client, false);
+    MaybeSecureSocketAdaptor serverSocket(d_ioService, d_server, false);
+    auto                     session = std::make_shared<Session>(d_ioService,
+                                             std::move(serverSocket),
+                                             std::move(clientSocket),
+                                             &d_selector,
+                                             &d_eventSource,
+                                             &d_pool,
+                                             &d_dnsResolver,
+                                             d_mapper,
+                                             LOCAL_HOSTNAME,
+                                             d_authIntercept);
+
+    session->start();
+
+    // Run the tests through to completion
+    driveTo(5);
+
+    EXPECT_TRUE(session->finished());
+}
+
+TEST_F(SessionTest,
+       Unauthorized_Client_Test_With_Authentication_Failure_Close_Capability)
+{
+    EXPECT_CALL(d_selector, acquireConnection(_, _))
+        .WillOnce(DoAll(SetArgPointee<0>(d_cm), Return(0)));
+
+    AuthResponseData authResponseData(AuthResponseData::AuthResult::DENY,
+                                      "Unauthorized test client");
+    EXPECT_CALL(*d_authIntercept, sendRequest(_, _))
+        .WillOnce(InvokeArgument<1>(authResponseData));
+
+    EXPECT_CALL(*d_mapper, prime(_, _)).Times(AtLeast(1));
+    EXPECT_CALL(*d_mapper, mapToHostname(makeEndpoint("2.3.4.5", 2345)))
+        .WillRepeatedly(Return(std::string("host1")));
+    EXPECT_CALL(*d_mapper, mapToHostname(makeEndpoint("0.0.0.0", 0)))
+        .WillRepeatedly(Return(std::string("host0")));
+
+    TestSocketState::State base;
+    base.d_local  = makeEndpoint("1.2.3.4", 1234);
+    base.d_remote = makeEndpoint("2.3.4.5", 2345);
+    base.d_secure = false;
+
+    // Initialise the state
+    d_serverState.pushItem(0, base);
+    driveTo(0);
+
+    testSetupServerHandshake(1);
+    testSetupClientSendsProtocolHeader(2);
+    methods::StartOk overriddenStartOk = clientStartOk();
+    FieldTable       clientProperties;
+    auto             capabilitiesTable = std::make_shared<FieldTable>();
+    capabilitiesTable->pushField(Constants::authenticationFailureClose(),
+                                 FieldValue('t', true));
+    clientProperties.pushField(Constants::capabilities(),
+                               FieldValue('F', capabilitiesTable));
+    overriddenStartOk.setClientProperties(clientProperties);
+    testSetupClientStartOk(3, overriddenStartOk);
+    testSetupUnauthClientOpenWithShutdown(4, true);
 
     MaybeSecureSocketAdaptor clientSocket(d_ioService, d_client, false);
     MaybeSecureSocketAdaptor serverSocket(d_ioService, d_server, false);

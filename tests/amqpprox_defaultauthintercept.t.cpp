@@ -43,7 +43,7 @@ TEST(DefaultAuthIntercept, SendRequest)
     DefaultAuthIntercept    defaultAuth(ioService);
     auto responseCb = [](const AuthResponseData &authResponseData) {
         ASSERT_EQ(authResponseData.getAuthResult(),
-                  AuthResponseData::AuthResult::ALLOW);
+                  AuthResponseData::AuthResult::DENY);
         ASSERT_EQ(authResponseData.getReason(), "Default auth gate service");
     };
     defaultAuth.sendRequest(AuthRequestData(), responseCb);

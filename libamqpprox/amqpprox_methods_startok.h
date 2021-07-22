@@ -65,6 +65,12 @@ class StartOk {
     constexpr inline static int methodType() { return 11; }
 
     /**
+     * \brief Set specified AMQP client properties
+     * \param clientProperties AMQP client properties
+     */
+    void setClientProperties(const FieldTable &clientProperties);
+
+    /**
      * \brief Set specified AMQP authMechanism
      * \param authMechanism AMQP authentication mechanism
      */

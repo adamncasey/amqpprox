@@ -22,6 +22,7 @@
 #include <amqpprox_bufferhandle.h>
 #include <amqpprox_bufferpool.h>
 #include <amqpprox_connector.h>
+#include <amqpprox_fieldtable.h>
 #include <amqpprox_flowtype.h>
 #include <amqpprox_frame.h>
 #include <amqpprox_maybesecuresocketadaptor.h>
@@ -120,10 +121,15 @@ class Session : public std::enable_shared_from_this<Session> {
     void disconnect(bool forcible);
 
     /**
-     * \brief Disconnect unauthorized client side session gracefully and close
-     * the socket for server side session
+     * \brief Disconnect unauthorized client side connection, if client sets
+     * 'authentication_failure_close' capability to true in AMQP START-OK
+     * connection method; otherwise snap the socket for client side connection.
+     * And snap the socket for server side connection.
+     * https://www.rabbitmq.com/auth-notification.html
+     * \param clientProperties will be used to find the client
+     * 'authentication_failure_close' capability value
      */
-    void disconnectUnauthClientGracefully();
+    void disconnectUnauthClient(const FieldTable &clientProperties);
 
     /**
      * \brief Disconnect the session from the backend, but leave the client

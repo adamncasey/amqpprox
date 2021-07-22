@@ -40,6 +40,11 @@ bool StartOk::encode(Buffer &buffer, const StartOk &startOk)
            Types::encodeShortString(buffer, startOk.d_locale);
 }
 
+void StartOk::setClientProperties(const FieldTable &clientProperties)
+{
+    d_properties = clientProperties;
+}
+
 void StartOk::setAuthMechanism(std::string_view authMechanism)
 {
     d_mechanism = authMechanism;

@@ -423,6 +423,11 @@ void Connector::synthesizeProxyProtocolHeader(
     d_buffer = tempBuffer.currentData();
 }
 
+const FieldTable Connector::getClientProperties() const
+{
+    return d_startOk.properties();
+}
+
 const std::pair<std::string_view, std::string_view>
 Connector::getAuthMechanismCredentials() const
 {

@@ -36,7 +36,7 @@ void DefaultAuthIntercept::sendRequest(const AuthRequestData,
                                        const ReceiveResponseCb &responseCb)
 {
     auto cb = [responseCb] {
-        AuthResponseData authResponseData(AuthResponseData::AuthResult::ALLOW,
+        AuthResponseData authResponseData(AuthResponseData::AuthResult::DENY,
                                           "Default auth gate service");
         responseCb(authResponseData);
     };
