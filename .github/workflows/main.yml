@@ -19,6 +19,11 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+      - name: Clang Format
+        uses: jidicula/clang-format-action@v3.4.0
+        with:
+          clang-format-version: '11'
+
       - name: Install Conan
         id: conan
         uses: turtlebrowser/get-conan@v1.0
@@ -33,7 +38,3 @@ jobs:
         run: make init
       - name: Build 
         run: make
-      - name: Clang Format
-        uses: jidicula/clang-format-action@v3.4.0
-        with:
-          clang-format-version: '11'
