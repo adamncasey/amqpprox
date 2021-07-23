@@ -33,3 +33,7 @@ jobs:
         run: make init
       - name: Build 
         run: make
+      - name: Clang Format
+        uses: jidicula/clang-format-action@v3.4.0
+        with:
+          clang-format-version: '11'
