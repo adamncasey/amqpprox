@@ -420,7 +420,6 @@ void Session::establishConnection()
                          "reason: "
                       << authResponseData.getReason();
             disconnectUnauthClient(d_connector.getClientProperties());
-            d_sessionState.setAuthDeniedConnection(true);
             return;
         }
         else if (authResponseData.getAuthResult() ==
@@ -442,7 +441,6 @@ void Session::establishConnection()
                       << static_cast<int>(authResponseData.getAuthResult())
                       << ", reason: " << authResponseData.getReason();
             disconnectUnauthClient(d_connector.getClientProperties());
-            d_sessionState.setAuthDeniedConnection(true);
             return;
         }
     };
@@ -476,6 +474,7 @@ void Session::pause()
 
 void Session::disconnectUnauthClient(const FieldTable &clientProperties)
 {
+    d_sessionState.setAuthDeniedConnection(true);
     std::shared_ptr<FieldTable> capabilitiesTable;
     FieldValue                  fv('F', capabilitiesTable);
     if (clientProperties.findFieldValue(&fv, Constants::capabilities()) &&
@@ -683,7 +682,11 @@ void Session::sendSyntheticData()
     if (outBuffer.size()) {
         auto &writeSocket =
             d_connector.sendToIngressSide() ? d_serverSocket : d_clientSocket;
-        handleWriteData(FlowType::EGRESS, writeSocket, outBuffer);
+        handleWriteData(d_connector.sendToIngressSide() ? FlowType::INGRESS
+                                                        : FlowType::EGRESS,
+                        writeSocket,
+                        outBuffer);
+        d_connector.resetOutBuffer();
     }
     if (d_connector.state() == Connector::State::ERROR) {
         disconnect(true);

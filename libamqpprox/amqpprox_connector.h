@@ -184,6 +184,11 @@ class Connector {
     Buffer outBuffer();
 
     /**
+     * \brief Reset current buffer
+     */
+    void resetOutBuffer();
+
+    /**
      * \return the current direction of the data flow (ingree/egress)
      */
     bool sendToIngressSide();

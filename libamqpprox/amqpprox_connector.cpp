@@ -308,6 +308,11 @@ Buffer Connector::outBuffer()
     return d_buffer;
 }
 
+void Connector::resetOutBuffer()
+{
+    d_buffer = Buffer();
+}
+
 bool Connector::sendToIngressSide()
 {
     return d_sendToIngressSide;

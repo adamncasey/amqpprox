@@ -146,7 +146,8 @@ class SessionTest : public ::testing::Test {
     SocketIntercept                             d_server;
     std::vector<uint8_t>                        d_protocolHeader;
     int                                         d_step;
-    std::shared_ptr<AuthInterceptInterfaceMock> d_authIntercept;
+    std::shared_ptr<AuthInterceptInterface>     d_authIntercept;
+    std::shared_ptr<AuthInterceptInterfaceMock> d_mockAuthIntercept;
 
     SessionTest();
 
@@ -259,6 +260,7 @@ void SessionTest::testSetupUnauthClientOpenWithShutdown(
 {
     // Client  ------TuneOk------>  Proxy                         Broker
     // Client  ------Open-------->  Proxy                         Broker
+    // Client  <-----Close--------  Proxy                         Broker
     d_serverState.pushItem(idx, Data(encode(clientTuneOk())));
     d_serverState.pushItem(idx, Data(encode(clientOpen())));
     methods::Close closeMethod = methods::Close();
@@ -269,9 +271,8 @@ void SessionTest::testSetupUnauthClientOpenWithShutdown(
         [this, closeMethod, authenticationFailureClose](const auto &items) {
             if (authenticationFailureClose) {
                 auto data = filterVariant<Data>(items);
-                ASSERT_EQ(data.size(), 2);
+                ASSERT_EQ(data.size(), 1);
                 EXPECT_EQ(data[0], Data(encode(closeMethod)));
-                EXPECT_EQ(data[1], Data(encode(closeMethod)));
             }
             EXPECT_THAT(items, Contains(VariantWith<Call>(Call("shutdown"))));
             EXPECT_THAT(items, Contains(VariantWith<Call>(Call("close"))));
@@ -534,11 +535,6 @@ TEST_F(SessionTest, Connection_Then_Ping_Then_Disconnect)
     EXPECT_CALL(d_selector, acquireConnection(_, _))
         .WillOnce(DoAll(SetArgPointee<0>(d_cm), Return(0)));
 
-    AuthResponseData authResponseData(AuthResponseData::AuthResult::ALLOW,
-                                      "Authorized test client");
-    EXPECT_CALL(*d_authIntercept, sendRequest(_, _))
-        .WillOnce(InvokeArgument<1>(authResponseData));
-
     EXPECT_CALL(*d_mapper, prime(_, _)).Times(AtLeast(1));
     EXPECT_CALL(*d_mapper, mapToHostname(makeEndpoint("2.3.4.5", 2345)))
         .WillRepeatedly(Return(std::string("host1")));
@@ -661,10 +657,7 @@ TEST_F(SessionTest, BadServerHandshake)
 {
     EXPECT_CALL(d_selector, acquireConnection(_, _))
         .WillOnce(DoAll(SetArgPointee<0>(d_cm), Return(0)));
-    AuthResponseData authResponseData(AuthResponseData::AuthResult::ALLOW,
-                                      "Authorized test client");
-    EXPECT_CALL(*d_authIntercept, sendRequest(_, _))
-        .WillOnce(InvokeArgument<1>(authResponseData));
+
     EXPECT_CALL(*d_mapper, prime(_, _)).Times(AtLeast(1));
     EXPECT_CALL(*d_mapper, mapToHostname(makeEndpoint("2.3.4.5", 2345)))
         .WillRepeatedly(Return(std::string("host1")));
@@ -799,11 +792,6 @@ TEST_F(SessionTest, Connection_To_Proxy_Protocol)
     EXPECT_CALL(d_selector, acquireConnection(_, _))
         .WillOnce(DoAll(SetArgPointee<0>(cm), Return(0)));
 
-    AuthResponseData authResponseData(AuthResponseData::AuthResult::ALLOW,
-                                      "Authorized test client");
-    EXPECT_CALL(*d_authIntercept, sendRequest(_, _))
-        .WillOnce(InvokeArgument<1>(authResponseData));
-
     EXPECT_CALL(*d_mapper, prime(_, _)).Times(AtLeast(1));
     EXPECT_CALL(*d_mapper, mapToHostname(makeEndpoint("2.3.4.5", 2345)))
         .WillRepeatedly(Return(std::string("host1")));
@@ -921,11 +909,6 @@ TEST_F(SessionTest, Connect_Multiple_Dns)
 
     EXPECT_CALL(d_selector, acquireConnection(_, _))
         .WillOnce(DoAll(SetArgPointee<0>(d_cm), Return(0)));
-
-    AuthResponseData authResponseData(AuthResponseData::AuthResult::ALLOW,
-                                      "Authorized test client");
-    EXPECT_CALL(*d_authIntercept, sendRequest(_, _))
-        .WillOnce(InvokeArgument<1>(authResponseData));
 
     EXPECT_CALL(*d_mapper, prime(_, _)).Times(AtLeast(1));
     EXPECT_CALL(*d_mapper, mapToHostname(makeEndpoint("2.3.4.5", 2345)))
@@ -1069,11 +1052,6 @@ TEST_F(SessionTest, Failover_Dns_Failure)
     EXPECT_CALL(d_selector, acquireConnection(_, _))
         .WillOnce(DoAll(SetArgPointee<0>(d_cm), Return(0)));
 
-    AuthResponseData authResponseData(AuthResponseData::AuthResult::ALLOW,
-                                      "Authorized test client");
-    EXPECT_CALL(*d_authIntercept, sendRequest(_, _))
-        .WillOnce(InvokeArgument<1>(authResponseData));
-
     EXPECT_CALL(*d_mapper, prime(_, _)).Times(AtLeast(1));
     EXPECT_CALL(*d_mapper, mapToHostname(makeEndpoint("2.3.4.5", 2345)))
         .WillRepeatedly(Return(std::string("host1")));
@@ -1170,11 +1148,6 @@ TEST_F(SessionTest, Connection_Then_Ping_Then_Force_Disconnect)
     EXPECT_CALL(d_selector, acquireConnection(_, _))
         .WillOnce(DoAll(SetArgPointee<0>(d_cm), Return(0)));
 
-    AuthResponseData authResponseData(AuthResponseData::AuthResult::ALLOW,
-                                      "Authorized test client");
-    EXPECT_CALL(*d_authIntercept, sendRequest(_, _))
-        .WillOnce(InvokeArgument<1>(authResponseData));
-
     EXPECT_CALL(*d_mapper, prime(_, _)).Times(AtLeast(1));
     EXPECT_CALL(*d_mapper, mapToHostname(makeEndpoint("2.3.4.5", 2345)))
         .WillRepeatedly(Return(std::string("host1")));
@@ -1246,11 +1219,6 @@ TEST_F(SessionTest, Connection_Then_Ping_Then_Backend_Disconnect)
 {
     EXPECT_CALL(d_selector, acquireConnection(_, _))
         .WillOnce(DoAll(SetArgPointee<0>(d_cm), Return(0)));
-
-    AuthResponseData authResponseData(AuthResponseData::AuthResult::ALLOW,
-                                      "Authorized test client");
-    EXPECT_CALL(*d_authIntercept, sendRequest(_, _))
-        .WillOnce(InvokeArgument<1>(authResponseData));
 
     EXPECT_CALL(*d_mapper, prime(_, _)).Times(AtLeast(1));
     EXPECT_CALL(*d_mapper, mapToHostname(makeEndpoint("2.3.4.5", 2345)))
@@ -1335,7 +1303,7 @@ TEST_F(SessionTest, Authorized_Client_Test)
                                       "Authorized test client",
                                       modifiedMechanism,
                                       modifiedCredentials);
-    EXPECT_CALL(*d_authIntercept, sendRequest(_, _))
+    EXPECT_CALL(*d_mockAuthIntercept, sendRequest(_, _))
         .WillOnce(InvokeArgument<1>(authResponseData));
 
     EXPECT_CALL(*d_mapper, prime(_, _)).Times(AtLeast(1));
@@ -1393,7 +1361,7 @@ TEST_F(SessionTest, Authorized_Client_Test)
                                              &d_dnsResolver,
                                              d_mapper,
                                              LOCAL_HOSTNAME,
-                                             d_authIntercept);
+                                             d_mockAuthIntercept);
 
     session->start();
 
@@ -1422,7 +1390,7 @@ TEST_F(
 
     AuthResponseData authResponseData(AuthResponseData::AuthResult::DENY,
                                       "Unauthorized test client");
-    EXPECT_CALL(*d_authIntercept, sendRequest(_, _))
+    EXPECT_CALL(*d_mockAuthIntercept, sendRequest(_, _))
         .WillOnce(InvokeArgument<1>(authResponseData));
 
     EXPECT_CALL(*d_mapper, prime(_, _)).Times(AtLeast(1));
@@ -1456,7 +1424,7 @@ TEST_F(
                                              &d_dnsResolver,
                                              d_mapper,
                                              LOCAL_HOSTNAME,
-                                             d_authIntercept);
+                                             d_mockAuthIntercept);
 
     session->start();
 
@@ -1474,7 +1442,7 @@ TEST_F(SessionTest,
 
     AuthResponseData authResponseData(AuthResponseData::AuthResult::DENY,
                                       "Unauthorized test client");
-    EXPECT_CALL(*d_authIntercept, sendRequest(_, _))
+    EXPECT_CALL(*d_mockAuthIntercept, sendRequest(_, _))
         .WillOnce(InvokeArgument<1>(authResponseData));
 
     EXPECT_CALL(*d_mapper, prime(_, _)).Times(AtLeast(1));
@@ -1516,7 +1484,7 @@ TEST_F(SessionTest,
                                              &d_dnsResolver,
                                              d_mapper,
                                              LOCAL_HOSTNAME,
-                                             d_authIntercept);
+                                             d_mockAuthIntercept);
 
     session->start();
 
@@ -1530,11 +1498,6 @@ TEST_F(SessionTest, Printing_Breathing_Test)
 {
     EXPECT_CALL(d_selector, acquireConnection(_, _))
         .WillOnce(DoAll(SetArgPointee<0>(d_cm), Return(0)));
-
-    AuthResponseData authResponseData(AuthResponseData::AuthResult::ALLOW,
-                                      "Authorized test client");
-    EXPECT_CALL(*d_authIntercept, sendRequest(_, _))
-        .WillOnce(InvokeArgument<1>(authResponseData));
 
     EXPECT_CALL(*d_mapper, prime(_, _)).Times(AtLeast(1));
     EXPECT_CALL(*d_mapper, mapToHostname(makeEndpoint("2.3.4.5", 2345)))
@@ -1664,7 +1627,9 @@ SessionTest::SessionTest()
                    Constants::protocolHeader() +
                        Constants::protocolHeaderLength())
 , d_step(0)
-, d_authIntercept(std::make_shared<AuthInterceptInterfaceMock>(d_ioService))
+, d_authIntercept(std::make_shared<DefaultAuthIntercept>(d_ioService))
+, d_mockAuthIntercept(
+      std::make_shared<AuthInterceptInterfaceMock>(d_ioService))
 {
     std::vector<BackendSet::Partition> partitions;
     partitions.push_back(
