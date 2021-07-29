@@ -29,9 +29,9 @@ AuthRequestData::AuthRequestData(std::string_view vhostName,
 }
 
 AuthRequestData::AuthRequestData()
-: d_vhostName("")
-, d_authMechanism("")
-, d_credentials("")
+: d_vhostName()
+, d_authMechanism()
+, d_credentials()
 {
 }
 

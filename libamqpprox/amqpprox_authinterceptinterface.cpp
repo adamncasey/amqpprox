@@ -24,7 +24,6 @@ namespace amqpprox {
 AuthInterceptInterface::AuthInterceptInterface(
     boost::asio::io_service &ioService)
 : d_ioService(ioService)
-, d_mutex()
 {
 }
 

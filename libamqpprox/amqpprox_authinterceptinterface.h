@@ -21,8 +21,6 @@
 
 #include <functional>
 #include <iostream>
-#include <mutex>
-#include <string>
 
 #include <boost/asio.hpp>
 
@@ -35,7 +33,6 @@ namespace amqpprox {
 class AuthInterceptInterface {
   protected:
     boost::asio::io_service &d_ioService;
-    mutable std::mutex       d_mutex;
 
   public:
     /**
