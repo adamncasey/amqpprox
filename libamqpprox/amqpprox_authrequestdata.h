@@ -16,6 +16,7 @@
 #ifndef BLOOMBERG_AMQPPROX_AUTHREQUESTDATA
 #define BLOOMBERG_AMQPPROX_AUTHREQUESTDATA
 
+#include <iostream>
 #include <string>
 #include <string_view>
 
@@ -43,7 +44,51 @@ class AuthRequestData {
                     std::string_view credentials);
 
     AuthRequestData();
+
+    /**
+     * \return vhost name
+     */
+    inline const std::string getVhostName() const;
+
+    /**
+     * \return authentication mechanism field for START-OK connection method.
+     * This field will be extracted from START-OK connection method sent from
+     * the client.
+     */
+    inline const std::string getAuthMechanism() const;
+
+    /**
+     * \return response field for START-OK connection method. This field will
+     * be extracted from START-OK connection method sent from the client.
+     */
+    inline const std::string getCredentials() const;
+
+    /**
+     * \brief Serialize auth request data using protobuf. Schema is defined in
+     * authrequest.proto file.
+     * \param ouput Pointer to serialized byte data in std::string format
+     * \return true in case of successful serialization, otherwise false
+     */
+    bool serializeAuthRequestData(std::string *output) const;
 };
+
+inline const std::string AuthRequestData::getVhostName() const
+{
+    return d_vhostName;
+}
+
+inline const std::string AuthRequestData::getAuthMechanism() const
+{
+    return d_authMechanism;
+}
+
+inline const std::string AuthRequestData::getCredentials() const
+{
+    return d_credentials;
+}
+
+std::ostream &operator<<(std::ostream &         os,
+                         const AuthRequestData &authRequestData);
 
 }
 }

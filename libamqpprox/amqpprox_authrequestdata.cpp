@@ -16,6 +16,9 @@
 
 #include <amqpprox_authrequestdata.h>
 
+#include <authrequest.pb.h>
+#include <sasl.pb.h>
+
 namespace Bloomberg {
 namespace amqpprox {
 
@@ -33,6 +36,25 @@ AuthRequestData::AuthRequestData()
 , d_authMechanism()
 , d_credentials()
 {
+}
+
+bool AuthRequestData::serializeAuthRequestData(std::string *output) const
+{
+    authproto::AuthRequest authRequest;
+    authRequest.set_vhostname(d_vhostName);
+    authproto::SASL *sasl = authRequest.mutable_authdata();
+    sasl->set_authmechanism(d_authMechanism);
+    sasl->set_credentials(d_credentials);
+    return authRequest.SerializeToString(output);
+}
+
+std::ostream &operator<<(std::ostream &         os,
+                         const AuthRequestData &authRequestData)
+{
+    os << "AuthRequestData = [vhost name:" << authRequestData.getVhostName()
+       << ", auth mechanism:" << authRequestData.getAuthMechanism()
+       << ", credentials:" << authRequestData.getCredentials() << "]";
+    return os;
 }
 
 }

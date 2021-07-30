@@ -49,10 +49,10 @@ class AuthResponseData {
      * connection method
      * \param credentials response field for START-OK connection method
      */
-    explicit AuthResponseData(const AuthResult &authResult,
-                              std::string_view  reason        = "",
-                              std::string_view  authMechanism = "",
-                              std::string_view  credentials   = "");
+    AuthResponseData(const AuthResult &authResult    = AuthResult::DENY,
+                     std::string_view  reason        = "",
+                     std::string_view  authMechanism = "",
+                     std::string_view  credentials   = "");
 
     /**
      * \return authn/authz result for connecting AMQP client to proxy
@@ -76,6 +76,15 @@ class AuthResponseData {
      * be injected to START-OK connection method to send to the broker.
      */
     inline const std::string getCredentials() const;
+
+    /**
+     * \brief Deserialize auth response data using protobuf. Schema is defined
+     * in authresponse.proto file.
+     * \param data Serialized byte data in std::string format, which will be
+     * deserialized and stored in called object.
+     * \return true in case of successful serialization, otherwise false
+     */
+    bool deserializeAuthResponseData(const std::string &data);
 };
 
 inline const AuthResponseData::AuthResult
@@ -98,6 +107,9 @@ inline const std::string AuthResponseData::getCredentials() const
 {
     return d_credentials;
 }
+
+std::ostream &operator<<(std::ostream &          os,
+                         const AuthResponseData &authResponseData);
 
 }
 }

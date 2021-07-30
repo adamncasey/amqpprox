@@ -86,6 +86,7 @@ add_library(libamqpprox STATIC
     amqpprox_authresponsedata.cpp
     amqpprox_defaultauthintercept.cpp)
 
-target_link_libraries(libamqpprox LINK_PUBLIC ${LIBAMQPPROX_LIBS})
+target_include_directories(libamqpprox PRIVATE ${PROTO_HDR_PATH})
+target_link_libraries(libamqpprox LINK_PUBLIC authproto ${LIBAMQPPROX_LIBS})
 
 include("${BUILD_FLAVOUR_DIR}/libamqpprox.post.cmake" OPTIONAL)

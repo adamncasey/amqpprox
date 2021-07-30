@@ -18,6 +18,9 @@
 
 #include <string_view>
 
+#include <authresponse.pb.h>
+#include <sasl.pb.h>
+
 namespace Bloomberg {
 namespace amqpprox {
 
@@ -30,6 +33,40 @@ AuthResponseData::AuthResponseData(const AuthResult &authResult,
 , d_authMechanism(authMechanism)
 , d_credentials(credentials)
 {
+}
+
+bool AuthResponseData::deserializeAuthResponseData(const std::string &data)
+{
+    authproto::AuthResponse authResponse;
+    if (!authResponse.ParseFromString(data)) {
+        return false;
+    }
+
+    if (authResponse.result() == authproto::AuthResponse::ALLOW)
+        d_authResult = AuthResult::ALLOW;
+    else
+        d_authResult = AuthResult::DENY;
+    d_reason = authResponse.reason();
+    if (authResponse.has_authdata()) {
+        authproto::SASL sasl = authResponse.authdata();
+        d_authMechanism      = sasl.authmechanism();
+        d_credentials        = sasl.credentials();
+    }
+    return true;
+}
+
+std::ostream &operator<<(std::ostream &          os,
+                         const AuthResponseData &authResponseData)
+{
+    os << "AuthRequestData = [Auth Result:"
+       << ((authResponseData.getAuthResult() ==
+            AuthResponseData::AuthResult::ALLOW)
+               ? "ALLOW"
+               : "DENY")
+       << ", Reason: " << authResponseData.getReason()
+       << ", auth mechanism:" << authResponseData.getAuthMechanism()
+       << ", credentials:" << authResponseData.getCredentials() << "]";
+    return os;
 }
 
 }
