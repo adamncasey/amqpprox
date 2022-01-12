@@ -16,16 +16,30 @@
 
 use amiquip::{Connection, Exchange, Publish};
 use anyhow::Result;
-use std::net::SocketAddr;
 
-pub(crate) fn start_client(sz: usize, address: SocketAddr) -> Result<()> {
-    let mut connection = Connection::insecure_open(format!("amqp://{}", address).as_str())?;
+/// Start an AMQP client connecting to address, sending num_messages of message_size.
+pub(crate) fn run_sync_client(address: String,
+    message_size: usize,
+    num_messages: usize,
+) -> Result<()> {
+    let mut connection = Connection::insecure_open(&address)?;
     let channel = connection.open_channel(None)?;
     let exchange = Exchange::direct(&channel);
 
     let mut arr = Vec::new();
-    arr.resize(sz, 0);
+    arr.resize(message_size, 0);
+
+    let mut count = 0;
     loop {
+        if count > num_messages {
+            break;
+        }
         exchange.publish(Publish::new(&arr, "hello"))?;
+
+        count += 1;
     }
+
+    Ok(())
 }
+
+

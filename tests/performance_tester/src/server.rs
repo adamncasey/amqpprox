@@ -21,17 +21,36 @@ use amq_protocol::protocol::channel;
 use amq_protocol::protocol::connection;
 use amq_protocol::protocol::AMQPClass;
 use amq_protocol::types::AMQPValue;
-use anyhow::Result;
 use anyhow::bail;
+use anyhow::Result;
 use bytes::BytesMut;
 use futures::SinkExt;
 use futures::StreamExt;
+use rustls_pemfile::{certs, pkcs8_private_keys};
+use std::fs::File;
+use std::io;
+use std::io::BufReader;
 use std::io::Cursor;
 use std::net::SocketAddr;
+use std::path::Path;
+use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpListener;
-use tokio::net::TcpStream;
+use tokio_rustls::rustls::{self, Certificate, PrivateKey};
+use tokio_rustls::TlsAcceptor;
 use AMQPFrame::Method;
+
+fn load_certs(path: &Path) -> io::Result<Vec<Certificate>> {
+    certs(&mut BufReader::new(File::open(path)?))
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))
+        .map(|mut certs| certs.drain(..).map(Certificate).collect())
+}
+
+fn load_keys(path: &Path) -> io::Result<Vec<PrivateKey>> {
+    pkcs8_private_keys(&mut BufReader::new(File::open(path)?))
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
+        .map(|mut keys| keys.drain(..).map(PrivateKey).collect())
+}
 
 #[derive(thiserror::Error, Debug)]
 enum AMQPCodecError {
@@ -112,11 +131,15 @@ impl AMQPCodec {
     }
 }
 
-pub async fn process_connection(mut socket: TcpStream) -> Result<()> {
+pub async fn process_connection<
+    Stream: tokio::io::AsyncRead + std::marker::Unpin + tokio::io::AsyncWrite,
+>(
+    mut socket: Stream,
+) -> Result<()> {
     let mut buf: [u8; 8] = [0; 8];
     socket.read_exact(&mut buf).await?; // We ignore if it's correct
 
-    log::info!("Protocol header received");
+    log::debug!("Protocol header received");
 
     let codec = AMQPCodec::new();
     let mut framed = tokio_util::codec::Framed::new(socket, codec);
@@ -171,7 +194,7 @@ pub async fn process_connection(mut socket: TcpStream) -> Result<()> {
         bail!("Invalid protocol, received: {:?}", frame);
     }
 
-    log::info!("Connected!");
+    log::info!("Handshake complete");
     while let Some(frame) = framed.next().await {
         log::trace!("Received: {:?}", &frame);
         match frame {
@@ -186,6 +209,7 @@ pub async fn process_connection(mut socket: TcpStream) -> Result<()> {
                 let closeok_method = connection::AMQPMethod::CloseOk(connection::CloseOk {});
                 let closeok = Method(0, AMQPClass::Connection(closeok_method));
                 framed.send(closeok).await?;
+                log::info!("Closing connection requested: {:?}. Sent CloseOk", closemsg);
                 return Ok(());
             }
             _ => {}
@@ -194,8 +218,36 @@ pub async fn process_connection(mut socket: TcpStream) -> Result<()> {
     Ok(())
 }
 
+pub async fn run_tls_server(address: SocketAddr, cert_chain: &Path, key: &Path) -> Result<()> {
+    let certs = load_certs(cert_chain)?;
+    let mut keys = load_keys(key)?;
+
+    log::info!("{:?} {:?}", certs, keys);
+
+    let config = rustls::ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth()
+        .with_single_cert(certs, keys.remove(0))
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
+    let acceptor = TlsAcceptor::from(Arc::new(config));
+
+    log::info!("Listening on {:?}", &address);
+    let listener = TcpListener::bind(address).await?;
+
+    loop {
+        let (socket, peer) = listener.accept().await?;
+        let acceptor = acceptor.clone();
+        log::debug!("Connection from {}", peer);
+        tokio::spawn(async move {
+            let stream = acceptor.accept(socket).await?;
+
+            process_connection(stream).await
+        });
+    }
+}
+
 pub async fn run_server(address: SocketAddr) -> Result<()> {
-    log::info!("Awaiting on {:?}", &address);
+    log::info!("Listening on {:?}", &address);
     let listener = TcpListener::bind(address).await?;
 
     loop {
