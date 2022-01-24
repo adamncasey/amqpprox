@@ -22,6 +22,10 @@ init:
 clean:
 	cd $(BUILDDIR) && make clean
 
+integration-tests:
+	./tests/acceptance/run.sh
+	python3.8 -mpytest -s tests/performance_tester/integration-tests.py
+
 DOCKER_IMAGE ?= amqpprox
 DOCKER_BUILDDIR ?= build/docker-$(DOCKER_IMAGE)
 DOCKER_ARGS ?= $(DOCKER_EXTRA_ARGS) -v $(CUR_DIR):/source -v $(CUR_DIR)/$(DOCKER_BUILDDIR):/build -it $(DOCKER_IMAGE)

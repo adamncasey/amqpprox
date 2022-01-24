@@ -23,4 +23,4 @@ WORKDIR /source
 RUN make setup && make init && make
 ENV ROBOT_SOURCE_DIR=/source/tests/acceptance
 ENV ROBOT_BINARY_DIR=/opt/rabbitmq/sbin
-ENTRYPOINT [ "/source/tests/acceptance/run.sh"]
+ENV AMQPPROX_BIN_DIR=/build/bin
