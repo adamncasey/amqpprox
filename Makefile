@@ -54,7 +54,7 @@ docker-integration-tests: BUILD_FLAVOUR ?= conan
 docker-integration-tests: BUILD_DOCKERFILE ?= buildfiles/$(BUILD_FLAVOUR)/integration.Dockerfile
 docker-integration-tests:
 	docker build -t $(DOCKER_IMAGE) -f $(BUILD_DOCKERFILE) .
-	docker run $(DOCKER_IMAGE)
+	docker run $(DOCKER_IMAGE) make integration-tests
 
 docs:
 	doxygen Doxygen.config
