@@ -23,8 +23,8 @@ clean:
 	cd $(BUILDDIR) && make clean
 
 integration-tests:
-	./tests/acceptance/run.sh
 	python3.8 -mpytest -s tests/performance_tester/integration-tests.py
+	./tests/acceptance/run.sh
 
 DOCKER_IMAGE ?= amqpprox
 DOCKER_BUILDDIR ?= build/docker-$(DOCKER_IMAGE)
