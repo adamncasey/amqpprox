@@ -87,22 +87,23 @@ fn main() -> Result<()> {
 
         let opts = opts.clone();
         runtime.block_on(async {
-            log::info!("Starting performance test of amqpprox");
+            println!("Starting performance test of amqpprox");
 
             let address = opts.listen_address;
             let _server = if let (Some(listen_cert), Some(listen_key)) =
                 (opts.listen_cert, opts.listen_key)
             {
-                log::info!("Starting TLS dummy amqp server");
+                println!("Starting TLS dummy amqp server");
+                let acceptor = server::create_tls_acceptor(&listen_cert, &listen_key).unwrap();
                 tokio::spawn(async move {
-                    server::run_tls_server(address, &listen_cert, &listen_key).await
+                    server::run_tls_server(address, acceptor).await
                 })
             } else {
-                log::info!("Starting non-TLS dummy amqp server");
+                println!("Starting non-TLS dummy amqp server");
                 tokio::spawn(async move { server::run_server(address).await })
             };
 
-            wait_for_addr(opts.listen_address, Duration::from_millis(1000))
+            wait_for_addr(opts.listen_address, Duration::from_millis(10000))
                 .await
                 .unwrap();
 
@@ -161,13 +162,21 @@ async fn wait_for_addr(addr: SocketAddr, timeout_total: Duration) -> Result<()> 
     let mut iteration = 1;
 
     loop {
+        let start = Instant::now();
+
         match try_addr(addr, timeout_step).await {
             Ok(()) => return Ok(()),
             Err(err) => {
+                println!("Waiting for dummy server to start: {:?}", err);
                 if iteration == iterations {
                     return Err(err);
                 }
             }
+        }
+
+        let target = start.checked_add(timeout_step).ok_or(anyhow::anyhow!("Timeout add overflowed"))?;
+        if let Some(sleep_time) = target.checked_duration_since(Instant::now()) {
+            tokio::time::sleep(sleep_time).await;
         }
 
         iteration += 1;

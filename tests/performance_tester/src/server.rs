@@ -218,7 +218,7 @@ pub async fn process_connection<
     Ok(())
 }
 
-pub async fn run_tls_server(address: SocketAddr, cert_chain: &Path, key: &Path) -> Result<()> {
+pub fn create_tls_acceptor(cert_chain: &Path, key: &Path) -> Result<TlsAcceptor> {
     let certs = load_certs(cert_chain)?;
     let mut keys = load_keys(key)?;
 
@@ -229,7 +229,11 @@ pub async fn run_tls_server(address: SocketAddr, cert_chain: &Path, key: &Path) 
         .with_no_client_auth()
         .with_single_cert(certs, keys.remove(0))
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-    let acceptor = TlsAcceptor::from(Arc::new(config));
+
+    Ok(TlsAcceptor::from(Arc::new(config)))
+}
+
+pub async fn run_tls_server(address: SocketAddr, acceptor: TlsAcceptor) -> Result<()> {
 
     log::info!("Listening on {:?}", &address);
     let listener = TcpListener::bind(address).await?;
