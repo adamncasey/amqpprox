@@ -1,4 +1,4 @@
-FROM rabbitmq:3.9
+FROM rabbitmq:3.7.28
 
 ENV DEBIAN_FRONTEND=noninteractive
 
