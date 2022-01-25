@@ -20,6 +20,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::time::Instant;
 use tokio::runtime::Builder;
+use std::time::Duration;
 
 mod client;
 mod server;
@@ -29,7 +30,7 @@ struct PerfTesterOpts {
     #[clap(long, default_value = "amqp://localhost:5672/")]
     address: String,
 
-    #[clap(long, default_value_t = 10)]
+    #[clap(long, default_value_t = 10, help="Number of total AMQP clients to run")]
     clients: usize,
 
     #[clap(long, default_value_t = 100)]
@@ -38,17 +39,20 @@ struct PerfTesterOpts {
     #[clap(long, default_value_t = 10)]
     num_messages: usize,
 
-    #[clap(long, default_value_t = 50)]
+    #[clap(long, default_value_t = 50, help="Max AMQP clients which can run in parallel")]
     max_threads: usize,
 
-    #[clap(long)]
+    #[clap(long, help="IP Address/port for the dummy AMQP server to listen on")]
     listen_address: SocketAddr,
 
-    #[clap(long)]
+    #[clap(long, help="TLS cer used by the dummy AMQP server")]
     listen_cert: Option<PathBuf>,
 
-    #[clap(long)]
+    #[clap(long, help="TLS key used by the dummy AMQP server. Must be the appropriate key for the provided cert")]
     listen_key: Option<PathBuf>,
+
+    #[clap(long, default_value="routing-key", help="Routing key passed for sent messages")]
+    routing_key: String
 }
 
 fn main() -> Result<()> {
@@ -83,7 +87,7 @@ fn main() -> Result<()> {
                 tokio::spawn(async move { server::run_server(address).await })
             };
 
-            tokio::time::sleep(std::time::Duration::from_millis(1000)).await; // TODO
+            wait_for_addr(opts.listen_address, Duration::from_millis(1000)).await.unwrap();
 
             let mut handles = Vec::new();
             for _ in 0..opts.clients {
@@ -111,9 +115,9 @@ fn main() -> Result<()> {
     let duration = start.elapsed();
     let total_bytes = opts.clients * opts.num_messages * opts.message_size;
     println!(
-        "{} clients and {}KB in {}seconds",
+        "{} clients and {}KiB in {}seconds",
         opts.clients,
-        total_bytes / 1000,
+        total_bytes / 1024,
         duration.as_secs_f64()
     );
 
@@ -121,11 +125,39 @@ fn main() -> Result<()> {
     let bytes_per_sec = total_bytes as f64 / duration.as_secs_f64();
 
     println!(
-        "{} connections/second, {} MB/second",
+        "{} connections/second, {} MiB/second",
         clients_per_sec,
-        bytes_per_sec / 1000f64 / 1000f64
+        bytes_per_sec / 1024f64 / 1024f64
     );
 
     //server.await??;
+    Ok(())
+}
+
+async fn wait_for_addr(addr: SocketAddr, timeout_total: Duration) -> Result<()> {
+    let iterations = 10;
+    let timeout_step = timeout_total / iterations;
+
+    let mut iteration = 1;
+
+    loop {
+        match try_addr(addr, timeout_step).await {
+            Ok(()) => return Ok(()),
+            Err(err) => {
+                if iteration == iterations {
+                    return Err(err);
+                }
+            }
+        }
+
+        iteration += 1;
+    }
+}
+
+async fn try_addr(addr: SocketAddr, timeout: Duration) -> Result<()> {
+    let connect = tokio::net::TcpStream::connect(addr);
+
+    let _: tokio::net::TcpStream = tokio::time::timeout(timeout, connect).await??;
+
     Ok(())
 }
