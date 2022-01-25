@@ -18,9 +18,9 @@ use anyhow::Result;
 use clap::Parser;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::time::Duration;
 use std::time::Instant;
 use tokio::runtime::Builder;
-use std::time::Duration;
 
 mod client;
 mod server;
@@ -30,7 +30,11 @@ struct PerfTesterOpts {
     #[clap(long, default_value = "amqp://localhost:5672/")]
     address: String,
 
-    #[clap(long, default_value_t = 10, help="Number of total AMQP clients to run")]
+    #[clap(
+        long,
+        default_value_t = 10,
+        help = "Number of total AMQP clients to run"
+    )]
     clients: usize,
 
     #[clap(long, default_value_t = 100)]
@@ -39,20 +43,31 @@ struct PerfTesterOpts {
     #[clap(long, default_value_t = 10)]
     num_messages: usize,
 
-    #[clap(long, default_value_t = 50, help="Max AMQP clients which can run in parallel")]
+    #[clap(
+        long,
+        default_value_t = 50,
+        help = "Max AMQP clients which can run in parallel"
+    )]
     max_threads: usize,
 
-    #[clap(long, help="IP Address/port for the dummy AMQP server to listen on")]
+    #[clap(long, help = "IP Address/port for the dummy AMQP server to listen on")]
     listen_address: SocketAddr,
 
-    #[clap(long, help="TLS cer used by the dummy AMQP server")]
+    #[clap(long, help = "TLS cer used by the dummy AMQP server")]
     listen_cert: Option<PathBuf>,
 
-    #[clap(long, help="TLS key used by the dummy AMQP server. Must be the appropriate key for the provided cert")]
+    #[clap(
+        long,
+        help = "TLS key used by the dummy AMQP server. Must be the appropriate key for the provided cert"
+    )]
     listen_key: Option<PathBuf>,
 
-    #[clap(long, default_value="routing-key", help="Routing key passed for sent messages")]
-    routing_key: String
+    #[clap(
+        long,
+        default_value = "routing-key",
+        help = "Routing key passed for sent messages"
+    )]
+    routing_key: String,
 }
 
 fn main() -> Result<()> {
@@ -87,15 +102,20 @@ fn main() -> Result<()> {
                 tokio::spawn(async move { server::run_server(address).await })
             };
 
-            wait_for_addr(opts.listen_address, Duration::from_millis(1000)).await.unwrap();
+            wait_for_addr(opts.listen_address, Duration::from_millis(1000))
+                .await
+                .unwrap();
 
             let mut handles = Vec::new();
             for _ in 0..opts.clients {
                 let address = opts.address.clone();
                 let message_size = opts.message_size;
                 let num_messages = opts.num_messages;
+                let routing_key = opts.routing_key.clone();
 
-                let handle = tokio::task::spawn_blocking(move || crate::client::run_sync_client(address, message_size, num_messages));
+                let handle = tokio::task::spawn_blocking(move || {
+                    crate::client::run_sync_client(address, message_size, num_messages, &routing_key)
+                });
                 handles.push(handle);
             }
 

@@ -18,9 +18,11 @@ use amiquip::{Connection, Exchange, Publish};
 use anyhow::Result;
 
 /// Start an AMQP client connecting to address, sending num_messages of message_size.
-pub(crate) fn run_sync_client(address: String,
+pub(crate) fn run_sync_client(
+    address: String,
     message_size: usize,
     num_messages: usize,
+    routing_key: &str,
 ) -> Result<()> {
     let mut connection = Connection::insecure_open(&address)?;
     let channel = connection.open_channel(None)?;
@@ -34,12 +36,10 @@ pub(crate) fn run_sync_client(address: String,
         if count > num_messages {
             break;
         }
-        exchange.publish(Publish::new(&arr, "hello"))?;
+        exchange.publish(Publish::new(&arr, routing_key))?;
 
         count += 1;
     }
 
     Ok(())
 }
-
-
