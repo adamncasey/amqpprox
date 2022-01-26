@@ -151,7 +151,6 @@ fn main() -> Result<()> {
         bytes_per_sec / 1024f64 / 1024f64
     );
 
-    //server.await??;
     Ok(())
 }
 

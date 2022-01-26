@@ -21,15 +21,35 @@ USAGE:
     amqpprox_perf_tester [OPTIONS] --listen-address <LISTEN_ADDRESS>
 
 OPTIONS:
-        --address <ADDRESS>                  [default: amqp://localhost:5672/]
-        --clients <CLIENTS>                  [default: 10]
-    -h, --help                               Print help information
+        --address <ADDRESS>
+            [default: amqp://localhost:5672/]
+
+        --clients <CLIENTS>
+            Number of total AMQP clients to run [default: 10]
+
+    -h, --help
+            Print help information
+
         --listen-address <LISTEN_ADDRESS>
+            IP Address/port for the dummy AMQP server to listen on
+
         --listen-cert <LISTEN_CERT>
+            TLS cer used by the dummy AMQP server
+
         --listen-key <LISTEN_KEY>
-        --max-threads <MAX_THREADS>          [default: 50]
-        --message-size <MESSAGE_SIZE>        [default: 100]
-        --num-messages <NUM_MESSAGES>        [default: 10]
+            TLS key used by the dummy AMQP server. Must be the appropriate key for the provided cert
+
+        --max-threads <MAX_THREADS>
+            Max AMQP clients which can run in parallel [default: 50]
+
+        --message-size <MESSAGE_SIZE>
+            [default: 100]
+
+        --num-messages <NUM_MESSAGES>
+            [default: 10]
+
+        --routing-key <ROUTING_KEY>
+            Routing key passed for sent messages [default: routing-key]
 ```
 
 ## Performance Testing

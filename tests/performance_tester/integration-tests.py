@@ -67,7 +67,6 @@ def run_perf_test_command(amqpprox_url, message_size, num_messages, max_threads,
     env = os.environ.copy()
     env["RUST_LOG"] = "info"
 
-    print(os.getcwd())
     return subprocess.run(
         [
             env.get("CARGO_PATH", "cargo"),
